@@ -284,38 +284,50 @@ ggplot()+
   
 
 
-lianas<-read.csv("spXplot.csv",sep=",",header = TRUE,row.names=1)#spXplots
-lianas[is.na(lianas)]<-0
+lianas.t<-lianas %>% dplyr::select(Species, Plot) %>%
+  with(table(Species,Plot)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Species, Plot)) %>% t()
 
-lianas[1:4,]->lianas.t
-lianas[5:40,]->lianas.plots
-lianas.t[lianas.t>1]<-1
-
-par(mfrow=c(1,1))
-
-boxplot(specaccum(lianas.plots[11:20,],"random") # Edge South
-)
-boxplot(specaccum(lianas.plots[1:10,],"random"), # Edge East
-        lty=2, add=T) 
-plot(specaccum(lianas.plots[29:36,]),  # Interior South
-     add=T) 
-plot(specaccum(lianas.plots[21:28,]), # Interior East 
-     add=T) 
+# Include rarefaction curves!!!
 
 
-boxplot(specnumber(lianas.plots[1:20,]),
-        specnumber(lianas.plots[11:20,]),
-        specnumber(lianas.plots[21:28,]),
-        specnumber(lianas.plots[29:36,]),
-        names=c("East Edge","South Edge","East Interior","South Interior"),
-        cex=0.7,ylab=expression(paste("Species Richness (spp/50",m^2,")")))
+locality <- c(rep("EE",9),
+              rep("ES",10),
+              rep("IE",5),
+              rep("IS",8))
+edges<-c(rep("Edge",19),
+         rep("Interior",13))
+gps<-c(rep("East",9),
+       rep("South",10),
+       rep("East",5),
+       rep("South",8))
+dist<-beta.pair(lianas.t, index.family="jaccard")
+
+bd_local<-betadisper(dist[[3]],locality)
+bd_edges<-betadisper(dist[[3]],edges)
+bd_gps<-betadisper(dist[[3]],gps)
+par(mfrow=c(1,3))
+plot(bd_local)
+plot(bd_edges)
+plot(bd_gps)
+anova(bd_local)
+
+liana_edge<-betapart.core(lianas.t[1:19,])
+liana_interior<-betapart.core(lianas.t[20:32,])
+
+beta.multi(liana_edge)
+beta.multi(liana_interior)
 
 
+
+##########
 summary(lianas.core <- betapart.core(lianas.t))
 lianas.core$shared
 lianas.core$not.shared
 
-lianas.samp <- beta.sample(lianas.core,sites=4, samples=10)
+lianas.samp <- beta.sample(lianas.core, sites=4, samples=10)
 
 (dist.lianas <- lianas.samp$sampled.values)
 plot(density(dist.lianas$beta.SOR))

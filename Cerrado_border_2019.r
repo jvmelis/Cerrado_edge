@@ -27,9 +27,10 @@ p_treeAb<-ggplot(dados, aes(y=trees_ab, x=dist))+
   facet_grid(.~geo)+geom_boxplot()+theme_bw()
 cowplot::plot_grid(p_lianaAb,p_lianaBA, p_treeAb, p_treeBA)
 
-p<-ggplot(dados, aes(x=log(trees_BA), y=log(lianas_BA), 
+p<-ggplot(dados, aes(x=trees_ab, y=lianas_ab, 
                      shape=dist,color=geo, group=geo)) +
-  geom_point()+ geom_smooth(se=F, method=lm)+
+  geom_point()+ geom_smooth(se=F, method=glm, 
+                            method.args=list(family='poisson'))+
   theme_bw() + theme(legend.position="none")
 ggMarginal(p, type="histogram", fill="white")
 
@@ -104,6 +105,7 @@ plot(tree_intradist)
 
 
 ## 2. Environmental differences between edges and interiors
+
 
 #################################
 # A. betadisp e adonis (PERMANOVA): environmental differences?
@@ -219,6 +221,7 @@ plot(mod6)
 summary(mod6) # ns 
 anova(mod6, 'Chisq') # ns
 
+
 #######################
 ## 3. N_trees_w_lianas x N_trees_wo_lianas * local
 # Ribeiro et al. 2011 - m1
@@ -237,9 +240,97 @@ trees %>% group_by(geo,dist, Plot) %>%
   geom_point()+theme_bw()
 
 
-trees %>% 
-  mutate(AGB = exp(-3.3369+2.7635*log(Diameter)+0.4059*log(Height)+1.2439*log(WD))) %>%
-  ggplot(aes(y=n_lianas, x=log(AGB), group=dist, color=dist))+
-  geom_smooth(method = "glm", method.args=list(family="poisson"), se=F)+
-  facet_grid(geo~.)+
-  geom_point()+theme_bw()
+trees<-trees %>% 
+  mutate(n_lianas = ifelse(is.na(n_lianas),0,n_lianas)) %>%
+  # mutate(AGB = exp(-3.3369+2.7635*log(Diameter)+0.4059*log(Height)+1.2439*log(WD))) %>%
+  mutate(tree_BA = pi*(Diameter/2), local=as.factor(paste0(dist,"_",geo))) 
+
+trees %>% mutate(zero = ifelse(n_lianas>0,"zero","non_zero")) %>%
+  ggplot(aes(n_lianas, fill=zero)) +
+  facet_grid(dist~geo) + scale_y_continuous(expand=c(0,0))+
+  geom_histogram()+theme_classic()
+
+# Zero Inflated models (Poisson and NBinomial)
+
+if(!require(glmmTMB)){install.packages("glmmTMB")}
+
+ZIP <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+               data = trees,
+               family = poisson)
+
+ZINB <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                data = trees,
+                family = nbinom2)
+anova(ZINB,ZIP)
+
+summary(ZINB)
+
+contrast(lstrends(ZINB, var="tree_BA", "local"))
+plot(lstrends(ZINB, var="tree_BA", "local"))
+plot(lsmeans(ZINB, ~tree_BA|local)) # trees in interior show -3 lianas/tree
+
+ggplot()+
+  geom_point(data=mutate(trees,zero=ifelse(n_lianas>0,"non_zero", "zero")), 
+               aes(y=n_lianas, x=log(tree_BA), color=zero))+
+  scale_color_manual(values=c("black", "red"))+
+  geom_smooth(data=filter(trees,n_lianas>0),
+              aes(y=n_lianas, x=log(tree_BA),  group=local),
+              method = "glm.nb", se=F)+
+  geom_smooth(data=mutate(trees,zero=ifelse(n_lianas>0, 1, 0)),
+              aes(y=zero, x=log(tree_BA),  group=local),
+              method = "glm", se=F, method.args=list(family='binomial'), 
+              color="red")+
+  facet_grid(geo~dist)+theme_bw()
+  
+
+
+lianas<-read.csv("spXplot.csv",sep=",",header = TRUE,row.names=1)#spXplots
+lianas[is.na(lianas)]<-0
+
+lianas[1:4,]->lianas.t
+lianas[5:40,]->lianas.plots
+lianas.t[lianas.t>1]<-1
+
+par(mfrow=c(1,1))
+
+boxplot(specaccum(lianas.plots[11:20,],"random") # Edge South
+)
+boxplot(specaccum(lianas.plots[1:10,],"random"), # Edge East
+        lty=2, add=T) 
+plot(specaccum(lianas.plots[29:36,]),  # Interior South
+     add=T) 
+plot(specaccum(lianas.plots[21:28,]), # Interior East 
+     add=T) 
+
+
+boxplot(specnumber(lianas.plots[1:20,]),
+        specnumber(lianas.plots[11:20,]),
+        specnumber(lianas.plots[21:28,]),
+        specnumber(lianas.plots[29:36,]),
+        names=c("East Edge","South Edge","East Interior","South Interior"),
+        cex=0.7,ylab=expression(paste("Species Richness (spp/50",m^2,")")))
+
+
+summary(lianas.core <- betapart.core(lianas.t))
+lianas.core$shared
+lianas.core$not.shared
+
+lianas.samp <- beta.sample(lianas.core,sites=4, samples=10)
+
+(dist.lianas <- lianas.samp$sampled.values)
+plot(density(dist.lianas$beta.SOR))
+
+pair.lianas <- beta.pair(lianas.t)
+par(mfrow=c(1,3))
+plot(hclust(pair.lianas$beta.sim, method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sim]), line=0.3)
+plot(hclust(pair.lianas$beta.sne, method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sne]), line=0.3)
+plot(hclust(pair.lianas$beta.sor, method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sor]), line=0.3)
+
+pair.lianas$beta.sne/pair.lianas$beta.sor
+pair.lianas$beta.sim

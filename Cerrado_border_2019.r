@@ -2,8 +2,8 @@
 if(!require(readxl)){install.packages("readxl")}       # read_excel
 if(!require(tidyverse)){install.packages('tidyverse')} # data manipulation & graphs
 if(!require(cowplot)){install.packages('cowplot')}     # graphics
-if(!require(ggalt)){install.packages("ggalt")}         # graphics
-if(!require(ggExtra)){install.packages('ggExtra')}     # graphics
+# if(!require(ggalt)){install.packages("ggalt")}         # graphics
+# if(!require(ggExtra)){install.packages('ggExtra')}     # graphics (ggMarginal)
 # if(!require(lmerTest)){install.packages('lmerTest')}   # 
 if(!require(lme4)){install.packages('lme4')}           # (g)lmer
 if(!require(MASS)){install.packages("MASS")}           # glm.nb
@@ -15,7 +15,7 @@ if(!require(iNEXT)){install.packages("iNEXT")}         # rarefaction curves
 if(!require(betapart)){install.packages("betapart")}   # betapart
 
 
-# setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
+setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
 # source('clean_data.r')
 dados<-read.csv("clean_data.csv")
 
@@ -35,7 +35,7 @@ p<-ggplot(dados, aes(x=trees_ab, y=lianas_ab,
   geom_point()+ geom_smooth(se=F, method=glm, 
                             method.args=list(family='poisson'))+
   theme_bw() + theme(legend.position="bottom")
-ggMarginal(p, type="histogram", fill="white")
+# ggMarginal(p, type="histogram", fill="white")
 
 p+facet_grid(dist~.)
 
@@ -226,17 +226,9 @@ plot(mod6)
 summary(mod6) # ns 
 anova(mod6, 'Chisq') # ns
 
-
 #######################
 ## 3. N_trees_w_lianas x N_trees_wo_lianas * local
-# Ribeiro et al. 2011 - m1
-# EXP(-3.352+2.9853*LN(Diameter)+1.1855*LN(WD))
-# Ribeiro et al. 2011 - m4
-# EXP(-3.3369+2.7635*LN(Diameter)+0.4059*LN(Height)+1.2439*LN(WD))
-# Melo et al. Unpublished
-# EXP(-2.6504+0.8713*LN((Diameter^2)*Height))
-# Delliti et al. 
-# (28.77*(Diameter^2)*Height)/1000
+
 trees %>% group_by(geo,dist, Plot) %>%
   summarise(N = n(), N_lianas = sum(!is.na(n_lianas))) %>%
   ggplot(aes(y=N_lianas, x=N, group=dist, color=dist))+
@@ -247,13 +239,17 @@ trees %>% group_by(geo,dist, Plot) %>%
 
 trees<-trees %>% 
   mutate(n_lianas = ifelse(is.na(n_lianas),0,n_lianas)) %>%
-  # mutate(AGB = exp(-3.3369+2.7635*log(Diameter)+0.4059*log(Height)+1.2439*log(WD))) %>%
-  mutate(tree_BA = pi*(Diameter/2), local=as.factor(paste0(dist,"_",geo))) 
+  # mutate(AGB = exp(-3.3369+2.7635*log(Diameter)+0.4059*log(Height)+1.2439*log(WD))) %>% # Ribeiro et al. 2011 - m1
+  # mutate(AGB = exp(-3.352+2.9853*LN(Diameter)+1.1855*LN(WD))) %>% # Ribeiro et al. 2011 - m4
+  # mutate(AGB = exp(-3.3369+2.7635*LN(Diameter)+0.4059*LN(Height)+1.2439*LN(WD))) %>%  # 
+  # mutate(AGB = exp(-2.6504+0.8713*LN((Diameter^2)*Height))) %>% # Melo et al. Unpublished
+  # mutate(AGB = (28.77*(Diameter^2)*Height)/1000 ) %>% # Delliti et al. 
+  mutate(zero = ifelse(n_lianas==0,"No Lianas","With Lianas "))
 
-trees %>% mutate(zero = ifelse(n_lianas==0,"No Lianas","With Lianas ")) %>%
-  ggplot(aes(n_lianas, fill=zero)) +
-  facet_grid(dist~geo) + scale_y_continuous(expand=c(0,0))+
-  geom_histogram()+theme_classic()
+trees %>%  ggplot(aes(n_lianas, fill=zero)) +
+  facet_grid(dist~geo) + geom_hline(yintercept = 0)+
+  scale_y_continuous(expand=c(0,0))+
+  geom_histogram(color='black')+theme_classic()
 
 # Zero Inflated models (Poisson and NBinomial)
 
@@ -284,7 +280,8 @@ ggplot()+ # View ZINB Model (Red = LOGIT, Blue = NB)
               method = "glm", se=F, method.args=list(family='binomial'), 
               color="blue", linetype=1)+
   facet_grid(geo~dist)+theme_bw()
-  
+
+## LIANAS  
 # Rarefaction curves
 df <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>%
@@ -337,15 +334,16 @@ lianas_data <- lianas.t %>%
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
   filter(!is.na(Freq)) %>%
   with(table(Plot, Species)) %>% as.data.frame.matrix() 
+(mod <- metaMDS(lianas_data))
+par(mfrow=c(1,1))
+plot(mod, type="t")
+plot(mod); ordihull(mod,groups=dados$local,draw="polygon",col="grey90",label=T)
 
 adonis(lianas_data ~ geo*dist, data=dados, permutations = 999)
 adonis(lianas_data ~ local, data=dados, permutations = 999)
 envfit(mod, dados[,c('geo','dist', 'local')])
 
-(mod <- metaMDS(lianas_data))
-par(mfrow=c(1,1))
-plot(mod, type="t")
-plot(mod); ordihull(mod,groups=dados$local,draw="polygon",col="grey90",label=T)
+
 
 
 # https://chrischizinski.github.io/rstats/vegan-ggplot2/
@@ -375,7 +373,7 @@ ggplot() +
                               NMDS2=c(-1.0, 1.5, 1.5, 0.8)),
             aes(NMDS1,NMDS2, label=local), size=4)
 
-# beta partiotining !!!
+# beta partiotining
 lianas_table <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
@@ -383,6 +381,11 @@ lianas_table <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species, border)) %>% t()
 
 summary(lianas.core <- betapart.core(lianas_table))
+lianas %>% dplyr::select(Species, border) %>%
+  with(table(Species,border)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  group_by(border) %>% summarise(sum(Freq))
 lianas.core$shared
 lianas.core$not.shared
 
@@ -401,3 +404,132 @@ title(xlab=expression(beta[sor]), line=0.3)
 
 pair.lianas$beta.sne/pair.lianas$beta.sor
 pair.lianas$beta.sim
+
+
+## TREES
+# Rarefaction curves
+df <- trees %>%  mutate(border = paste0(geo,"_",dist)) %>% 
+  dplyr::select(Species, border) %>%
+  with(table(Species,border)) %>% as.data.frame() %>%
+  spread(border, Freq)  %>% dplyr::select(-Species) %>%
+  iNEXT(datatype="abundance") %>% fortify(type=1) %>% 
+  filter(method!="extrapolated") %>%
+  mutate(geo=ifelse(site=="east_edge"|site=="east_interior", 'East','South'),
+         dist=ifelse(site=="south_edge"|site=="east_edge", 'Edge','Interior'))
+
+ggplot(df, aes(x=x, y=y))+theme_bw()+
+  geom_point(shape=16, data=df[which(df$method=="observed"),]) +
+  geom_line(data=df[which(df$method!="observed"),]) +
+  geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
+                  fill=geo, color=NULL), alpha=0.5)+
+  scale_fill_grey(start = 0,end = 0.5)+
+  scale_color_grey(start = 0,end = 0.5)+
+  scale_y_continuous(expand=c(0,0))+
+  scale_x_continuous(breaks = seq(0,900,100))+
+  ggtitle(" ")+facet_grid(dist~.)+
+  xlab("Number of Individuals")+ ylab("Species Richness")+
+  guides(color= F, shape = F, 
+         fill=guide_legend(override.aes = 
+                             list(alpha=.5, color='black'), 
+                           title = ""))
+
+# PCoA
+trees.t<-trees %>% dplyr::select(Species, Plot) %>%
+  with(table(Species,Plot)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,Freq,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Species, Plot)) %>% t()
+locality <- c(rep("EE",10), rep("ES",10),
+              rep("IE",8), rep("IS",8))
+edges <- c(rep("Edge",20), rep("Interior",16))
+gps <-c(rep("East",10), rep("South",10),
+        rep("East",8), rep("South",8))
+trees_dist<-beta.pair(trees.t, index.family="jaccard")
+
+bd_local<-betadisper(trees_dist[[3]],locality)
+bd_edges<-betadisper(trees_dist[[3]],edges)
+bd_gps<-betadisper(trees_dist[[3]],gps)
+par(mfrow=c(1,3))
+plot(bd_local); plot(bd_edges); plot(bd_gps)
+anova(bd_local) # * ES
+anova(bd_gps)
+anova(bd_edges)
+
+# PERMANOVA
+trees_data <- trees.t %>% 
+  as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Plot, Species)) %>% as.data.frame.matrix() 
+
+(mod <- metaMDS(trees_data))
+par(mfrow=c(1,1))
+plot(mod, type="t")
+plot(mod); ordihull(mod,groups=dados$local,draw="polygon",col="grey90",label=T)
+
+adonis(trees_data ~ edges*gps, permutations = 999)
+adonis(trees_data ~ locality, data=dados, permutations = 999)
+envfit(mod, data.frame(locality,edges,gps))
+
+
+# https://chrischizinski.github.io/rstats/vegan-ggplot2/
+data.scores <- as.data.frame(scores(mod)) 
+data.scores$site <- rownames(data.scores)
+data.scores$grp <- locality
+data.scores$geo <- gps
+data.scores$dist <- edges
+
+species.scores <- as.data.frame(scores(mod, "species"))
+species.scores$species <- rownames(species.scores)
+
+ggplot() + 
+  stat_ellipse(data = data.scores, aes(x=NMDS1,y=NMDS2, 
+                                       group=grp),linetype=3)+
+  geom_point(data=data.scores, aes(x=NMDS1,y=NMDS2,
+                                  shape=geo, fill=dist),size=2) +
+  scale_shape_manual(values=c(21,24))+
+  scale_fill_grey(start = 1, end = .5)+
+  coord_equal()+ 
+  theme_classic() + 
+  guides(shape = guide_legend(
+    override.aes = list(fill="black")),
+    fill = guide_legend(override.aes =list(shape=22, size=3))) +
+  geom_text(data = data.frame(local=c("IE", "ES","EE","IS"),
+                              NMDS1=c( 0.2, 1.0, -0.5, 0.8),
+                              NMDS2=c( 0.2, 0.6,  0.5, 0.3)),
+            aes(NMDS1,NMDS2, label=local), size=4)
+
+# beta partiotining - OK
+trees_table <- trees %>% 
+  mutate(border = paste0(geo,"_",dist)) %>%
+  dplyr::select(Species, border)  %>%
+  with(table(Species, border)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Species, border)) %>% t()
+
+summary(trees.core <- betapart.core(trees_table))
+trees %>% mutate(border = paste0(geo,"_",dist)) %>%
+  dplyr::select(Species, border) %>%
+  with(table(Species,border)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  group_by(border) %>% summarise(sum(Freq))
+trees.core$shared
+trees.core$not.shared
+
+pair.trees <- beta.pair(trees_table)
+par(mfrow=c(1,3))
+plot(hclust(pair.trees$beta.sim, method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sim]), line=0.3)
+plot(hclust(pair.trees$beta.sne, 
+            method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sne]), line=0.3)
+plot(hclust(pair.trees$beta.sor, method="average"),
+     hang=-1, main='', sub='', xlab='')
+title(xlab=expression(beta[sor]), line=0.3)
+
+pair.trees$beta.sne/pair.lianas$beta.sor
+pair.trees$beta.sim

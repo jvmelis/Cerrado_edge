@@ -1,9 +1,18 @@
-# Cerrado_edge
-Manuscript "Edge influence on trees and lianas in a Cerrado savanna in Brazil"
+# Manuscript "Edge influence on trees and lianas in a Cerrado savanna in Brazil"
+Authors: 
 Submited to:
 Submission date:
 
-This repository has the following files:
+This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_border.r` and `cerrado_dados.xlsx.r`.
+
+### clean_data.r
+
+Based on `cerrado_dados.xlsx`, we edited (clean) the data in this script.
+
+### clean_data.csv
+
+The result of `clean_data.r`
+
 
 ### Cerrado_border_2019.r
 All the analyses performed and graphs constructed in a R script.

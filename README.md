@@ -11,8 +11,27 @@ Based on `cerrado_dados.xlsx`, we edited (clean) the data in this script.
 
 ### clean_data.csv
 
-The result of `clean_data.r`
+The result of `clean_data.r`. It has the following columns:
 
+`Plot`	
+`trees_BA`	
+`trees_ab`	
+`lianas_BA`	
+`lianas_ab`	
+`geo`	
+`dist`	
+`Tree_cov`	
+`Regen`	
+`Palm_cov`	
+`Bare_soil`	
+`native`	
+`exotic`	
+`brom`	
+`PAR`	
+`SOM`	
+`Al`	
+`Mn`
+`local`
 
 ### Cerrado_border_2019.r
 All the analyses performed and graphs constructed in a R script.

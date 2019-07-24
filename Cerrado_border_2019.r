@@ -13,7 +13,7 @@ if(!require(glmmTMB)){install.packages("glmmTMB")}     # Zero-Inflated Mixed Mod
 if(!require(vegan)){install.packages("vegan")}         # vegdist, adonis
 if(!require(iNEXT)){install.packages("iNEXT")}         # rarefaction curves
 if(!require(betapart)){install.packages("betapart")}   # betapart
-
+if(!require(bbmle)){install.packages('bbmle')}         # AICtab
 
 setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
 # source('clean_data.r')
@@ -230,8 +230,8 @@ anova(mod6, 'Chisq') # ns
 ## 3. N_trees_w_lianas x N_trees_wo_lianas * local
 
 trees %>% group_by(geo,dist, Plot) %>%
-  summarise(N = n(), N_lianas = sum(!is.na(n_lianas))) %>%
-  ggplot(aes(y=N_lianas, x=N, group=dist, color=dist))+
+  summarise(N_trees = n(), N_lianas = sum(n_lianas, na.rm=T)) %>%
+  ggplot(aes(y=N_lianas, x=N_trees, group=dist, color=dist))+
   geom_smooth(method = "glm", method.args=list(family="poisson"), se=F)+
   facet_grid(geo~.)+
   geom_point()+theme_bw()
@@ -244,7 +244,9 @@ trees<-trees %>%
   # mutate(AGB = exp(-3.3369+2.7635*LN(Diameter)+0.4059*LN(Height)+1.2439*LN(WD))) %>%  # 
   # mutate(AGB = exp(-2.6504+0.8713*LN((Diameter^2)*Height))) %>% # Melo et al. Unpublished
   # mutate(AGB = (28.77*(Diameter^2)*Height)/1000 ) %>% # Delliti et al. 
-  mutate(zero = ifelse(n_lianas==0,"No Lianas","With Lianas "))
+  mutate(zero = ifelse(n_lianas==0,"No Lianas","With Lianas "),
+         tree_BA = pi*((Diameter/2)^2),
+         local=paste0(geo,"_",dist))
 
 trees %>%  ggplot(aes(n_lianas, fill=zero)) +
   facet_grid(dist~geo) + geom_hline(yintercept = 0)+
@@ -253,22 +255,105 @@ trees %>%  ggplot(aes(n_lianas, fill=zero)) +
 
 # Zero Inflated models (Poisson and NBinomial)
 
-ZIP <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
-               data = trees,
-               family = poisson)
+zip <- glmmTMB(n_lianas ~ local + (1 | Plot), 
+                data = trees, family=poisson,
+                ziformula=~1)
+zip0 <- glmmTMB(n_lianas ~ local + (1 | Plot), 
+               data = trees, family=poisson,
+               ziformula=~local)
+zip1 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                data = trees, family=poisson,
+                ziformula=~1)
+zip2 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                data = trees, family=poisson,
+                ziformula=~local)
+zip3 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                data = trees, family=poisson,
+                ziformula=~1)
+zip4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                data = trees, family=poisson,
+                ziformula=~trees)
 
-ZINB <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
-                data = trees,
-                family = nbinom2)
-anova(ZINB,ZIP)
+bbmle::AICtab(zip,zip0,zip1,zip2,zip3, zip4) # zip4
 
-summary(ZINB)
+zinb <- glmmTMB(n_lianas ~ local + (1 | Plot), 
+                 data = trees, family=nbinom1,
+                 ziformula=~1)
+zinb0 <- glmmTMB(n_lianas ~ local + (1 | Plot), 
+                 data = trees, family=nbinom1,
+                 ziformula=~local)
+zinb1 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                data = trees, family=nbinom1,
+                ziformula=~1)
+zinb2 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                data = trees, family=nbinom1,
+                ziformula=~local)
+zinb3 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                data = trees, family=nbinom1,
+                ziformula=~1)
+zinb4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                data = trees, family=nbinom1,
+                ziformula=~local)
 
-contrast(lstrends(ZINB, var="tree_BA", "local"))
-plot(lstrends(ZINB, var="tree_BA", "local"))
-plot(lsmeans(ZINB, ~tree_BA|local)) # trees in interior show -3 lianas/tree
+bbmle::AICtab(zinb, zinb0,zinb1,zinb2,zinb3,zinb4) # zinb3
 
-ggplot()+ # View ZINB Model (Red = LOGIT, Blue = NB)
+bbmle::AICtab(zip4,zinb3) # zinb3
+
+## Hurdle
+# Poisson
+hurdleP0 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
+               data = trees, ziformula=~1,
+               family=truncated_poisson)
+hurdleP1 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
+                    data = trees, ziformula=~local,
+                    family=truncated_poisson)
+hurdleP2 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~1,
+                    family=truncated_poisson)
+hurdleP3 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~local ,
+                    family=truncated_poisson)
+hurdleP4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~1,
+                    family=truncated_poisson)
+hurdleP5 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~local,
+                    family=truncated_poisson)
+
+bbmle::AICtab(hurdleP0,hurdleP1,hurdleP2,hurdleP3,hurdleP4,hurdleP5) # hurdleP3
+
+# Negative Binomial
+hurdleNB0 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
+                    data = trees, ziformula=~1,
+                    family=truncated_nbinom1)
+hurdleNB1 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
+                    data = trees, ziformula=~local,
+                    family=truncated_nbinom1)
+hurdleNB2 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~1,
+                    family=truncated_nbinom1)
+hurdleNB3 <- glmmTMB(n_lianas ~ local + log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~local ,
+                    family=truncated_nbinom1)
+hurdleNB4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~1,
+                    family=truncated_poisson)
+hurdleNB5 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
+                    data = trees, ziformula=~local,
+                    family=truncated_nbinom1)
+
+bbmle::AICtab(hurdleNB0,hurdleNB1,hurdleNB2,hurdleNB3,hurdleNB4,hurdleNB5) # hurdleNB1
+
+## Final
+bbmle::AICtab(zinb3,hurdleP3,hurdleNB1) # zinb3
+
+summary(zinb3)
+contrast(lstrends(zinb3, var="tree_BA", "local"))
+contrast(lsmeans(zinb3, ~local|tree_BA))
+plot(lstrends(zinb3, var="tree_BA", "local"))
+plot(lsmeans(zinb3, ~local|tree_BA)) # trees w/ same BA in interior show < lianas
+
+ggplot()+ # View Hurdle Model (Red = LOGIT, Blue = NB)
   geom_point(data=mutate(trees,zero=ifelse(n_lianas>0,"non_zero", "zero")), 
                aes(y=n_lianas, x=log(tree_BA), color=zero))+
   scale_color_manual(values=c("black", "red"))+
@@ -278,9 +363,25 @@ ggplot()+ # View ZINB Model (Red = LOGIT, Blue = NB)
   geom_smooth(data=mutate(trees,zero=ifelse(n_lianas>0, 1, 0)),
               aes(y=zero, x=log(tree_BA),  group=local),
               method = "glm", se=F, method.args=list(family='binomial'), 
-              color="blue", linetype=1)+
+              color="blue", linetype=2)+
   facet_grid(geo~dist)+theme_bw()
 
+ggplot()+ # View ZINB Model (Red = LOGIT, Blue = NB)
+  geom_point(data=mutate(trees,zero=ifelse(n_lianas>0,"non_zero", "zero")), 
+             aes(y=n_lianas, x=log(tree_BA), color=zero))+
+  scale_color_manual(values=c("black", "red"))+
+  geom_smooth(data=filter(trees,n_lianas>0),
+              aes(y=n_lianas, x=log(tree_BA),  group=local),
+              method = "glm.nb", se=T)+
+  geom_hline(data = group_by(trees,geo,dist) %>%
+               filter(n_lianas>0) %>%
+               summarise(n_lianas=mean(n_lianas)),
+             aes(yintercept=n_lianas) )+
+  facet_grid(geo~dist)+theme_bw()
+
+
+# Beta diversity
+##################################
 ## LIANAS  
 # Rarefaction curves
 df <- lianas %>% dplyr::select(Species, border) %>%
@@ -342,8 +443,6 @@ plot(mod); ordihull(mod,groups=dados$local,draw="polygon",col="grey90",label=T)
 adonis(lianas_data ~ geo*dist, data=dados, permutations = 999)
 adonis(lianas_data ~ local, data=dados, permutations = 999)
 envfit(mod, dados[,c('geo','dist', 'local')])
-
-
 
 
 # https://chrischizinski.github.io/rstats/vegan-ggplot2/

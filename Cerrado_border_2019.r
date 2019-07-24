@@ -379,12 +379,31 @@ ggplot()+ # View ZINB Model (Red = LOGIT, Blue = NB)
              aes(yintercept=n_lianas) )+
   facet_grid(geo~dist)+theme_bw()
 
+# Simulation (Brooks et al. 2016)
+sims<-simulate(zinb3, seed = 1, nsim = 1000)
+simdatlist <- lapply(sims, function(n_lianas){
+  cbind(n_lianas, trees[,c('tree_BA', 'local', 'Plot')])
+})
+simdatsums <- lapply(simdatlist, function(x){
+  plyr::ddply(x, ~log(tree_BA)+local, summarize,
+        absence=mean(n_lianas==0),
+        mu=mean(n_lianas))
+})
+ssd<-do.call(rbind, simdatsums)
+
+ggplot(ssd, aes(y=absence, x=`log(tree_BA)`))+theme_bw()+
+  geom_point()+
+  facet_wrap(~local)+
+  ylab("Probability that lianas are not climbing")+
+  xlab("log(treeBA)")
+
 
 # Beta diversity
 ##################################
+##### Rarefaction curves
+########################
 ## LIANAS  
-# Rarefaction curves
-df <- lianas %>% dplyr::select(Species, border) %>%
+df_lianas <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>%
   spread(border, Freq)  %>% dplyr::select(-Species) %>%
   iNEXT(datatype="abundance") %>% fortify(type=1) %>% 
@@ -392,9 +411,9 @@ df <- lianas %>% dplyr::select(Species, border) %>%
   mutate(geo=ifelse(site=="BL"|site=="IL", 'East','South'),
          dist=ifelse(site=="BL"|site=="BS", 'Edge','Interior'))
 
-ggplot(df, aes(x=x, y=y))+theme_bw()+
-  geom_point(shape=16, data=df[which(df$method=="observed"),]) +
-  geom_line(data=df[which(df$method!="observed"),]) +
+ggplot(df_lianas, aes(x=x, y=y))+theme_bw()+
+  geom_point(shape=16, data=df_lianas[which(df_lianas$method=="observed"),]) +
+  geom_line(data=df_lianas[which(df_lianas$method!="observed"),]) +
   geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
                   fill=geo, color=NULL), alpha=0.5)+
   scale_fill_grey(start = 0,end = 0.5)+
@@ -402,13 +421,44 @@ ggplot(df, aes(x=x, y=y))+theme_bw()+
   scale_y_continuous(expand=c(0,0))+
   scale_x_continuous(breaks = seq(0,150,20))+
   ggtitle(" ")+facet_grid(dist~.)+
-    xlab("Number of Individuals")+ ylab("Species Richness")+
-    guides(color= F, shape = F, 
+  xlab("Number of Individuals of lianas (ind.plot-1)")+ 
+  ylab("Liana Species Richness")+
+  guides(color= F, shape = F, 
            fill=guide_legend(override.aes = 
                                list(alpha=.5, color='black'), 
                              title = ""))
+## TREES
+df_trees <- trees %>%  mutate(border = paste0(geo,"_",dist)) %>% 
+  dplyr::select(Species, border) %>%
+  with(table(Species,border)) %>% as.data.frame() %>%
+  spread(border, Freq)  %>% dplyr::select(-Species) %>%
+  iNEXT(datatype="abundance") %>% fortify(type=1) %>% 
+  filter(method!="extrapolated") %>%
+  mutate(geo=ifelse(site=="east_edge"|site=="east_interior", 'East','South'),
+         dist=ifelse(site=="south_edge"|site=="east_edge", 'Edge','Interior'))
 
-# PCoA
+ggplot(df_trees, aes(x=x, y=y))+theme_bw()+
+  geom_point(shape=16, data=df_trees[which(df_trees$method=="observed"),]) +
+  geom_line(data=df_trees[which(df_trees$method!="observed"),]) +
+  geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
+                  fill=geo, color=NULL), alpha=0.5)+
+  scale_fill_grey(start = 0,end = 0.5)+
+  scale_color_grey(start = 0,end = 0.5)+
+  scale_y_continuous(expand=c(0,0))+
+  scale_x_continuous(breaks = seq(0,900,100))+
+  ggtitle(" ")+facet_grid(dist~.)+
+  xlab("Number of Individuals of trees (ind.plot-1)")+ 
+  ylab("Tree Species Richness")+
+  guides(color= F, shape = F, 
+         fill=guide_legend(override.aes = 
+                             list(alpha=.5, color='black'), 
+                           title = ""))
+
+
+################
+########## PCoA
+################
+## Lianas
 lianas.t<-lianas %>% dplyr::select(Species, Plot) %>%
   with(table(Species,Plot)) %>% as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,Freq,NA)) %>% 
@@ -429,7 +479,33 @@ par(mfrow=c(1,3))
 plot(bd_local); plot(bd_edges); plot(bd_gps)
 anova(bd_local) # * IS
 
+## TREES
+trees.t<-trees %>% dplyr::select(Species, Plot) %>%
+  with(table(Species,Plot)) %>% as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,Freq,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Species, Plot)) %>% t()
+local_trees <- c(rep("EE",10), rep("ES",10),
+              rep("IE",8), rep("IS",8))
+edges_trees <- c(rep("Edge",20), rep("Interior",16))
+gps_trees <-c(rep("East",10), rep("South",10),
+        rep("East",8), rep("South",8))
+trees_dist<-beta.pair(trees.t, index.family="jaccard")
+
+bd_local<-betadisper(trees_dist[[3]],local_trees)
+bd_edges<-betadisper(trees_dist[[3]],edges_trees)
+bd_gps<-betadisper(trees_dist[[3]],gps_trees)
+par(mfrow=c(1,3))
+plot(bd_local); plot(bd_edges); plot(bd_gps)
+anova(bd_local) # * ES
+anova(bd_gps)
+anova(bd_edges)
+
+###############
 # PERMANOVA
+#############
+# see: https://chrischizinski.github.io/rstats/vegan-ggplot2/
+## Lianas
 lianas_data <- lianas.t %>% 
   as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
@@ -444,8 +520,6 @@ adonis(lianas_data ~ geo*dist, data=dados, permutations = 999)
 adonis(lianas_data ~ local, data=dados, permutations = 999)
 envfit(mod, dados[,c('geo','dist', 'local')])
 
-
-# https://chrischizinski.github.io/rstats/vegan-ggplot2/
 data.scores <- as.data.frame(scores(mod)) 
 data.scores$site <- rownames(data.scores)
 data.scores$grp <- locality
@@ -472,7 +546,55 @@ ggplot() +
                               NMDS2=c(-1.0, 1.5, 1.5, 0.8)),
             aes(NMDS1,NMDS2, label=local), size=4)
 
+## Trees
+trees_data <- trees.t %>% 
+  as.data.frame() %>% 
+  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
+  filter(!is.na(Freq)) %>%
+  with(table(Plot, Species)) %>% as.data.frame.matrix() 
+
+(mod_trees <- metaMDS(trees_data))
+par(mfrow=c(1,1))
+plot(mod_trees, type="t")
+plot(mod_trees); ordihull(mod_trees,
+                          groups=dados$local,
+                          draw="polygon",col="grey90",label=T)
+
+adonis(trees_data ~ edges_trees*gps_trees, permutations = 999) # stres > 0.2?
+adonis(trees_data ~ local_trees, data=dados, permutations = 999)
+envfit(mod_trees, data.frame(local_trees,edges_trees,gps_trees))
+
+data.scores <- as.data.frame(scores(mod_trees)) 
+data.scores$site <- rownames(data.scores)
+data.scores$grp <- local_trees
+data.scores$geo <- gps_trees
+data.scores$dist <- edges_trees
+
+species.scores <- as.data.frame(scores(mod_trees, "species"))
+species.scores$species <- rownames(species.scores)
+
+ggplot() + 
+  stat_ellipse(data = data.scores, aes(x=NMDS1,y=NMDS2, 
+                                       group=grp),linetype=3)+
+  geom_point(data=data.scores, aes(x=NMDS1,y=NMDS2,
+                                   shape=geo, fill=dist),size=2) +
+  scale_shape_manual(values=c(21,24))+
+  scale_fill_grey(start = 1, end = .5)+
+  coord_equal()+ 
+  theme_classic() + 
+  guides(shape = guide_legend(
+    override.aes = list(fill="black")),
+    fill = guide_legend(override.aes =list(shape=22, size=3))) +
+  geom_text(data = data.frame(local=c("IE", "ES","EE","IS"),
+                              NMDS1=c( 0.2, 1.0, -0.5, 0.8),
+                              NMDS2=c( 0.2, 0.6,  0.5, 0.3)),
+            aes(NMDS1,NMDS2, label=local), size=4)
+
+
+####################
 # beta partiotining
+#####################
+## Lianas
 lianas_table <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
@@ -484,7 +606,7 @@ lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
   filter(!is.na(Freq)) %>%
-  group_by(border) %>% summarise(sum(Freq))
+  group_by(border) %>% dplyr::summarise(sum(Freq))
 lianas.core$shared
 lianas.core$not.shared
 
@@ -504,101 +626,7 @@ title(xlab=expression(beta[sor]), line=0.3)
 pair.lianas$beta.sne/pair.lianas$beta.sor
 pair.lianas$beta.sim
 
-
-## TREES
-# Rarefaction curves
-df <- trees %>%  mutate(border = paste0(geo,"_",dist)) %>% 
-  dplyr::select(Species, border) %>%
-  with(table(Species,border)) %>% as.data.frame() %>%
-  spread(border, Freq)  %>% dplyr::select(-Species) %>%
-  iNEXT(datatype="abundance") %>% fortify(type=1) %>% 
-  filter(method!="extrapolated") %>%
-  mutate(geo=ifelse(site=="east_edge"|site=="east_interior", 'East','South'),
-         dist=ifelse(site=="south_edge"|site=="east_edge", 'Edge','Interior'))
-
-ggplot(df, aes(x=x, y=y))+theme_bw()+
-  geom_point(shape=16, data=df[which(df$method=="observed"),]) +
-  geom_line(data=df[which(df$method!="observed"),]) +
-  geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
-                  fill=geo, color=NULL), alpha=0.5)+
-  scale_fill_grey(start = 0,end = 0.5)+
-  scale_color_grey(start = 0,end = 0.5)+
-  scale_y_continuous(expand=c(0,0))+
-  scale_x_continuous(breaks = seq(0,900,100))+
-  ggtitle(" ")+facet_grid(dist~.)+
-  xlab("Number of Individuals")+ ylab("Species Richness")+
-  guides(color= F, shape = F, 
-         fill=guide_legend(override.aes = 
-                             list(alpha=.5, color='black'), 
-                           title = ""))
-
-# PCoA
-trees.t<-trees %>% dplyr::select(Species, Plot) %>%
-  with(table(Species,Plot)) %>% as.data.frame() %>% 
-  mutate(Freq=ifelse(Freq>0,Freq,NA)) %>% 
-  filter(!is.na(Freq)) %>%
-  with(table(Species, Plot)) %>% t()
-locality <- c(rep("EE",10), rep("ES",10),
-              rep("IE",8), rep("IS",8))
-edges <- c(rep("Edge",20), rep("Interior",16))
-gps <-c(rep("East",10), rep("South",10),
-        rep("East",8), rep("South",8))
-trees_dist<-beta.pair(trees.t, index.family="jaccard")
-
-bd_local<-betadisper(trees_dist[[3]],locality)
-bd_edges<-betadisper(trees_dist[[3]],edges)
-bd_gps<-betadisper(trees_dist[[3]],gps)
-par(mfrow=c(1,3))
-plot(bd_local); plot(bd_edges); plot(bd_gps)
-anova(bd_local) # * ES
-anova(bd_gps)
-anova(bd_edges)
-
-# PERMANOVA
-trees_data <- trees.t %>% 
-  as.data.frame() %>% 
-  mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
-  filter(!is.na(Freq)) %>%
-  with(table(Plot, Species)) %>% as.data.frame.matrix() 
-
-(mod <- metaMDS(trees_data))
-par(mfrow=c(1,1))
-plot(mod, type="t")
-plot(mod); ordihull(mod,groups=dados$local,draw="polygon",col="grey90",label=T)
-
-adonis(trees_data ~ edges*gps, permutations = 999)
-adonis(trees_data ~ locality, data=dados, permutations = 999)
-envfit(mod, data.frame(locality,edges,gps))
-
-
-# https://chrischizinski.github.io/rstats/vegan-ggplot2/
-data.scores <- as.data.frame(scores(mod)) 
-data.scores$site <- rownames(data.scores)
-data.scores$grp <- locality
-data.scores$geo <- gps
-data.scores$dist <- edges
-
-species.scores <- as.data.frame(scores(mod, "species"))
-species.scores$species <- rownames(species.scores)
-
-ggplot() + 
-  stat_ellipse(data = data.scores, aes(x=NMDS1,y=NMDS2, 
-                                       group=grp),linetype=3)+
-  geom_point(data=data.scores, aes(x=NMDS1,y=NMDS2,
-                                  shape=geo, fill=dist),size=2) +
-  scale_shape_manual(values=c(21,24))+
-  scale_fill_grey(start = 1, end = .5)+
-  coord_equal()+ 
-  theme_classic() + 
-  guides(shape = guide_legend(
-    override.aes = list(fill="black")),
-    fill = guide_legend(override.aes =list(shape=22, size=3))) +
-  geom_text(data = data.frame(local=c("IE", "ES","EE","IS"),
-                              NMDS1=c( 0.2, 1.0, -0.5, 0.8),
-                              NMDS2=c( 0.2, 0.6,  0.5, 0.3)),
-            aes(NMDS1,NMDS2, label=local), size=4)
-
-# beta partiotining - OK
+## Trees
 trees_table <- trees %>% 
   mutate(border = paste0(geo,"_",dist)) %>%
   dplyr::select(Species, border)  %>%
@@ -613,7 +641,7 @@ trees %>% mutate(border = paste0(geo,"_",dist)) %>%
   with(table(Species,border)) %>% as.data.frame() %>% 
   mutate(Freq=ifelse(Freq>0,1,NA)) %>% 
   filter(!is.na(Freq)) %>%
-  group_by(border) %>% summarise(sum(Freq))
+  group_by(border) %>% dplyr::summarise(sum(Freq))
 trees.core$shared
 trees.core$not.shared
 

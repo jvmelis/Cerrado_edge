@@ -1,46 +1,24 @@
 ## Setting workspace and reading data
 if(!require(readxl)){install.packages("readxl")}       # read_excel
 if(!require(tidyverse)){install.packages('tidyverse')} # data manipulation & graphs
-if(!require(cowplot)){install.packages('cowplot')}     # graphics
-# if(!require(ggalt)){install.packages("ggalt")}         # graphics
-# if(!require(ggExtra)){install.packages('ggExtra')}     # graphics (ggMarginal)
-# if(!require(lmerTest)){install.packages('lmerTest')}   # 
 if(!require(lme4)){install.packages('lme4')}           # (g)lmer
 if(!require(MASS)){install.packages("MASS")}           # glm.nb
 if(!require(car)){install.packages("car")}             # vif
 if(!require(lsmeans)){install.packages('lsmeans')}     # lsmeans
-if(!require(glmmTMB)){install.packages("glmmTMB")}     # Zero-Inflated Mixed Models
+if(!require(glmmTMB)){install.packages("glmmTMB")}     # Zero-Inflated & Hurdle Mixed Models
+if(!require(bbmle)){install.packages('bbmle')}         # AICtab
 if(!require(vegan)){install.packages("vegan")}         # vegdist, adonis
 if(!require(iNEXT)){install.packages("iNEXT")}         # rarefaction curves
 if(!require(betapart)){install.packages("betapart")}   # betapart
-if(!require(bbmle)){install.packages('bbmle')}         # AICtab
+
 
 setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
 # source('clean_data.r')
 dados<-read.csv("clean_data.csv")
 
-### Liana & Tree Abund and Basal Area
-p_lianaBA<-ggplot(dados, aes(y=log(lianas_BA), x=dist))+
-  facet_grid(.~geo)+geom_boxplot()+theme_bw()
-p_treeBA<-ggplot(dados, aes(y=log(trees_BA), x=dist))+
-  facet_grid(.~geo)+geom_boxplot()+theme_bw()
-p_lianaAb<-ggplot(dados, aes(y=lianas_ab, x=dist))+
-  facet_grid(.~geo)+geom_boxplot()+theme_bw()
-p_treeAb<-ggplot(dados, aes(y=trees_ab, x=dist))+
-  facet_grid(.~geo)+geom_boxplot()+theme_bw()
-cowplot::plot_grid(p_lianaAb,p_lianaBA, p_treeAb, p_treeBA)
-
-p<-ggplot(dados, aes(x=trees_ab, y=lianas_ab, 
-                     shape=dist,color=geo, group=geo)) +
-  geom_point()+ geom_smooth(se=F, method=glm, 
-                            method.args=list(family='poisson'))+
-  theme_bw() + theme(legend.position="bottom")
-# ggMarginal(p, type="histogram", fill="white")
-
-p+facet_grid(dist~.)
-
+#######################################################################
 ## 1. (G)LM(M): BA & abund ~ dist*geo
-#################################### 
+#######################################################################
 # A. Lianas Abundance
 mod1 <- glm(lianas_ab~geo*dist, dados, family = poisson)
 mod2 <- MASS::glm.nb(lianas_ab~geo*dist, dados)
@@ -49,31 +27,38 @@ plot(mod1)
 summary(mod2) # overdispersion (159 / 31)
 plot(mod2)
 AIC(mod1,mod2)
-summary(mod2) # *** `geo`
+anova(mod2, test='Chisq')
+car::Anova(mod2)
+(ls_lianas<-lsmeans(mod2, ~geo*dist))
+exp(as.data.frame(ls_lianas)$lsmean)
+exp(as.data.frame(ls_lianas)$SE)
 lsmeans::lsmeans(mod2, specs='geo')
+lsmeans::lsmeans(mod2, specs='dist')
 
 # B. Trees Abundance
 mod3 <- glm(trees_ab~geo*dist, dados, family=poisson)
 plot(mod3)
 summary(mod3) # ns
+anova(mod3, test='Chisq')
+car::Anova(mod3)
+(ls_trees<-lsmeans::lsmeans(mod3, ~geo*dist))
+plot(ls_trees)
+exp(as.data.frame(ls_trees)$lsmean)
+exp(as.data.frame(ls_trees)$SE)
 lsmeans::lsmeans(mod3, specs='geo')
-TukeyHSD(aov(log(lianas_BA)~geo, dados))
 
 # C. Lianas BA
 lianas<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
   mutate(liana_BA = pi*((Total_DBS/2)^2),
          geo = ifelse(border=='BL'|border=="IL", 'East', 'South'),
          dist = ifelse(border=='BL'|border=="BS", 'Edge', 'Interior'))
-lianas %>% dplyr::select(border,geo) %>% table()
-lianas %>% dplyr::select(border,dist) %>% table()
 mod4 <- lmer(log(liana_BA)~geo*dist+(1|Plot), lianas)
 plot(mod4)
 summary(mod4) # ns
 anova(mod4, 'Chisq')
+car::Anova(mod4)
 (liana_intrageo<-lsmeans(mod4, ~ dist|geo)) # ns between `dist`
 plot(liana_intrageo) # ns
-(liana_intradist<-lsmeans(mod4, ~ geo|dist)) # ns between `geo`
-plot(liana_intradist)
 
 # D. Trees BA
 hosts<-read_xlsx('cerrado_dados.xlsx', sheet = 'host_tree')
@@ -88,30 +73,28 @@ hosts<-left_join(h1,h2, by="ind") %>%
                                     na.rm = T), n, 
                                 na.rm = T))
 trees<-read_xlsx('cerrado_dados.xlsx', sheet = 'trees')
-trees<-left_join(trees,hosts)
+trees<-left_join(trees,hosts, by='ind')
 
 mod5 <- trees %>% mutate(tree_BA = pi*((Diameter/2)^2)) %>%
   with(lmer(log(tree_BA)~geo*dist+(1|Plot)))
 plot(mod5)
 summary(mod5) # ns
 anova(mod5, 'Chisq')
-(tree_intrageo<-lsmeans(mod5, ~ dist|geo))
-plot(tree_intrageo) # in the south was ***, east not so much
-(tree_intradist<-lsmeans(mod5, ~ geo|dist)) # ns between `geo`
-plot(tree_intradist)
-
+car::Anova(mod5)
+(tree_intra<-lsmeans(mod5, ~ dist*geo))
+plot(tree_intra) # in the south was ***, east not so much
+exp(as.data.frame(tree_intra)$lsmean)
+exp(as.data.frame(tree_intra)$SE)
 
 # Synthesis: 
 # a) Differences in lianas abundace (south more)
 # b) Differences in trees abundace (south more)
 # c) NO differences in lianas BA
-# d) Differences in trees BA (edge specially in the south has higher BA)
+# d) Differences in trees BA (edge specially in the south has higher BA).
 
-
+#######################################################################
 ## 2. Environmental differences between edges and interiors
-
-
-#################################
+#######################################################################
 # A. betadisp e adonis (PERMANOVA): environmental differences?
 env_data<- dplyr::select(dados, c(Tree_cov, Regen, Palm_cov, Bare_soil, 
                        native, exotic, brom, PAR,SOM, Al, Mn)) %>% 
@@ -139,7 +122,7 @@ boxplot(dispersion)
 # Conclusion: there is a difference in dispersion AND location
 
 env_mds<-metaMDS(env_data)
-
+stressplot(env_mds)
 df <- cbind(as.data.frame(scores(env_mds)), 
       dplyr::select(dados, c(geo,dist, local))) 
 
@@ -164,10 +147,7 @@ ggplot()+
   scale_shape_manual(values=c(21,24))+
   scale_fill_grey(start = 1, end = .5)+
   theme_classic()+
-  guides(shape = guide_legend(
-    override.aes = list(fill="black")),
-         fill = guide_legend(
-    override.aes =list(shape=22, size=3)))+
+  theme(legend.position = 'none')+
   geom_text(data = as.data.frame(
     rbind(df_biofit[-7,]*1.45,df_biofit[7,]*1.2)),
     aes(NMDS1, NMDS2, 
@@ -176,6 +156,7 @@ ggplot()+
                               NMDS1=c(-.7,-.4,-.2,.3),
                               NMDS2=c(-.4,-.6,-.5,-.6)),
             aes(NMDS1,NMDS2, label=local), size=7)
+# ggsave('Fig2_EnvironmentalNMDS.png')
 
 # based on env_fit, we chose: PAR, Regen, native,  SOM, Al, Mn
 
@@ -226,16 +207,15 @@ plot(mod6)
 summary(mod6) # ns 
 anova(mod6, 'Chisq') # ns
 
-#######################
-## 3. N_trees_w_lianas x N_trees_wo_lianas * local
-
+#######################################################################
+## 3. N_lianas x trees_BA * local
+#######################################################################
 trees %>% group_by(geo,dist, Plot) %>%
   summarise(N_trees = n(), N_lianas = sum(n_lianas, na.rm=T)) %>%
   ggplot(aes(y=N_lianas, x=N_trees, group=dist, color=dist))+
   geom_smooth(method = "glm", method.args=list(family="poisson"), se=F)+
   facet_grid(geo~.)+
   geom_point()+theme_bw()
-
 
 trees<-trees %>% 
   mutate(n_lianas = ifelse(is.na(n_lianas),0,n_lianas)) %>%
@@ -253,8 +233,7 @@ trees %>%  ggplot(aes(n_lianas, fill=zero)) +
   scale_y_continuous(expand=c(0,0))+
   geom_histogram(color='black')+theme_classic()
 
-# Zero Inflated models (Poisson and NBinomial)
-
+# A. Zero Inflated models Poisson
 zip <- glmmTMB(n_lianas ~ local + (1 | Plot), 
                 data = trees, family=poisson,
                 ziformula=~1)
@@ -273,9 +252,9 @@ zip3 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot),
 zip4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
                 data = trees, family=poisson,
                 ziformula=~trees)
-
 bbmle::AICtab(zip,zip0,zip1,zip2,zip3, zip4) # zip4
 
+# B. Zero Inflated models NBinomial
 zinb <- glmmTMB(n_lianas ~ local + (1 | Plot), 
                  data = trees, family=nbinom1,
                  ziformula=~1)
@@ -294,13 +273,9 @@ zinb3 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot),
 zinb4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
                 data = trees, family=nbinom1,
                 ziformula=~local)
-
 bbmle::AICtab(zinb, zinb0,zinb1,zinb2,zinb3,zinb4) # zinb3
 
-bbmle::AICtab(zip4,zinb3) # zinb3
-
-## Hurdle
-# Poisson
+# C. Hurdle Poisson
 hurdleP0 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
                data = trees, ziformula=~1,
                family=truncated_poisson)
@@ -319,10 +294,9 @@ hurdleP4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot),
 hurdleP5 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
                     data = trees, ziformula=~local,
                     family=truncated_poisson)
-
 bbmle::AICtab(hurdleP0,hurdleP1,hurdleP2,hurdleP3,hurdleP4,hurdleP5) # hurdleP3
 
-# Negative Binomial
+# D. Hurdle Negative Binomial
 hurdleNB0 <- glmmTMB(n_lianas ~ local  + (1 | Plot), 
                     data = trees, ziformula=~1,
                     family=truncated_nbinom1)
@@ -341,11 +315,10 @@ hurdleNB4 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot),
 hurdleNB5 <- glmmTMB(n_lianas ~ local * log(tree_BA) + (1 | Plot), 
                     data = trees, ziformula=~local,
                     family=truncated_nbinom1)
-
 bbmle::AICtab(hurdleNB0,hurdleNB1,hurdleNB2,hurdleNB3,hurdleNB4,hurdleNB5) # hurdleNB1
 
-## Final
-bbmle::AICtab(zinb3,hurdleP3,hurdleNB1) # zinb3
+# E. Final
+bbmle::AICtab(zip4, zinb3,hurdleP3,hurdleNB1) # zinb3
 
 summary(zinb3)
 contrast(lstrends(zinb3, var="tree_BA", "local"))
@@ -397,11 +370,11 @@ ggplot(ssd, aes(y=absence, x=`log(tree_BA)`))+theme_bw()+
   ylab("Probability that lianas are not climbing")+
   xlab("log(treeBA)")
 
-
-# Beta diversity
-##################################
+########################################################################
+# 4. Edge effect on species richness and composition of lianas and trees
+########################################################################
 ##### Rarefaction curves
-########################
+######################
 ## LIANAS  
 df_lianas <- lianas %>% dplyr::select(Species, border) %>%
   with(table(Species,border)) %>% as.data.frame() %>%
@@ -455,9 +428,9 @@ ggplot(df_trees, aes(x=x, y=y))+theme_bw()+
                            title = ""))
 
 
-################
-########## PCoA
-################
+######################
+##### PCoA
+#####################
 ## Lianas
 lianas.t<-lianas %>% dplyr::select(Species, Plot) %>%
   with(table(Species,Plot)) %>% as.data.frame() %>% 
@@ -501,9 +474,9 @@ anova(bd_local) # * ES
 anova(bd_gps)
 anova(bd_edges)
 
-###############
-# PERMANOVA
-#############
+#####################
+##### PERMANOVA
+#####################
 # see: https://chrischizinski.github.io/rstats/vegan-ggplot2/
 ## Lianas
 lianas_data <- lianas.t %>% 
@@ -591,8 +564,8 @@ ggplot() +
             aes(NMDS1,NMDS2, label=local), size=4)
 
 
-####################
-# beta partiotining
+#####################
+##### Beta partiotining
 #####################
 ## Lianas
 lianas_table <- lianas %>% dplyr::select(Species, border) %>%

@@ -145,7 +145,7 @@ Fig2a<-ggplot()+
   scale_fill_grey(start = 1, end = .5)+
   theme_classic()+
   theme(legend.position = 'none')+
-  geom_text(data = data.frame(local=c("EE","ES","IE","IS"),
+  geom_text(data = data.frame(local=c("EE","SE","EI","SI"),
                               NMDS1=c(-.7, -.4, -.2, 0.4),
                               NMDS2=c(0.3, 1.0, .5, -.6)),
             aes(NMDS1,NMDS2, label=local), size=4)
@@ -384,71 +384,7 @@ df_trees <- trees %>%  mutate(border = paste0(geo,"_",dist)) %>%
   mutate(geo=ifelse(site=="east_edge"|site=="east_interior", 'East','South'),
          dist=ifelse(site=="south_edge"|site=="east_edge", 'Edge','Interior'))
 
-
-ggplot(df_lianas, aes(x=x, y=y, group=dist))+theme_bw()+
-  geom_point(shape=16, 
-             data=df_lianas[which(df_lianas$method=="observed"),]) +
-  geom_line(data=df_lianas[which(df_lianas$method!="observed"),]) +
-  geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
-                  fill=dist, color=NULL), alpha=0.5)+
-  scale_fill_grey(start = 0,end = 0.5)+
-  scale_y_continuous(expand=c(0,0))+
-  scale_x_continuous(breaks = seq(0,150,20))+
-  ggtitle(" ")+
-  facet_grid(geo~.)+
-  xlab("Number of Individuals of lianas (ind.plot-1)")+ 
-  ylab("Liana Species Richness")+
-  guides(color= F, shape = F, 
-           fill=guide_legend(override.aes = 
-                               list(alpha=.5, color='black'), 
-                             title = ""))
-
-ggplot(df_trees, aes(x=x, y=y, group=dist))+theme_bw()+
-  geom_point(shape=16, data=df_trees[which(df_trees$method=="observed"),]) +
-  geom_line(data=df_trees[which(df_trees$method!="observed"),]) +
-  geom_ribbon(aes(ymin=y.lwr, ymax=y.upr,
-                  fill=dist, color=NULL), alpha=0.5)+
-  scale_fill_grey(start = 0,end = 0.5)+
-  scale_y_continuous(expand=c(0,0))+
-  scale_x_continuous(breaks = seq(0,900,100))+
-  ggtitle(" ")+
-  facet_grid(geo~.)+
-  xlab("Number of Individuals of trees (ind.plot-1)")+ 
-  ylab("Tree Species Richness")+
-  theme(legend.position = 'none')
-
-# same image
-
-df_all <- df_trees
-df_all$x_lianas <- df_lianas$x
-df_all$y_lianas <- df_lianas$y
-df_all$ylwr_lianas <- df_lianas$y.lwr
-df_all$yupr_lianas <- df_lianas$y.upr
-
-scaleFactor <- max(df_all$yupr_lianas) / max(df_all$y.upr)
-
-ggplot()+theme_bw()+
-  #geom_point(shape=16, data=df_all[which(df_all$method=="observed"),]) +
-  geom_line(data=df_all[which(df_all$method!="observed"),],
-            aes(x=x,y=y)) +
-  geom_line(data=df_all[which(df_all$method!="observed"),],
-            aes(x=x_lianas*10,y=y_lianas*5)) +
-  geom_ribbon(data=df_all, aes(x=x,y=y,
-                               ymin=y.lwr, ymax=y.upr, color=NULL), 
-              alpha=0.5, fill='black')+
-  geom_ribbon(data=df_all, aes(x=x_lianas*10, y=y_lianas*5,
-                               ymin=ylwr_lianas*5, 
-                               ymax=yupr_lianas*5, color=NULL), 
-              alpha=0.5, fill='darkgrey')+
-  scale_y_continuous('Tree species Richness', expand=c(0,0), 
-                     breaks = seq(0,90, by=15),
-                     sec.axis = sec_axis(~./5, 
-                                         name='Lianas Species Richness'))+
-  scale_x_continuous('Tree abundance',
-    sec.axis = sec_axis(~./10, 
-                        name='Lianas Abundance'))+
-  ggtitle(" ")+theme(legend.position = 'none')+
-  facet_grid(geo~dist)
+# source('figura_rarefacao.r')
 
 df_lianas[which(df_lianas$method=="observed"),]
 lianas %>% dplyr::select(Species, border) %>%
@@ -561,7 +497,7 @@ Fig2b<-ggplot() +
   #coord_equal()+ 
   theme_classic()+
   theme(legend.position = 'none')+
-  geom_text(data = data.frame(local=c("IE", "ES","EE","IS"),
+  geom_text(data = data.frame(local=c("EI", "SE","EE","SI"),
                               NMDS1=c( 2.2,-0.2,-2.5,-1.0),
                               NMDS2=c( 1.1, 1.8, 0.2, 1.1)),
             aes(NMDS1,NMDS2, label=local), size=4)
@@ -622,7 +558,7 @@ Fig2c<-ggplot() +
   guides(shape = guide_legend(
     override.aes = list(fill="black")),
     fill = guide_legend(override.aes =list(shape=22, size=3))) +
-  geom_text(data = data.frame(local=c("IE", "ES","EE","IS"),
+  geom_text(data = data.frame(local=c("EI", "SE","EE","SI"),
                               NMDS1=c( 0.0, 1.0, -0.5, 0.8),
                               NMDS2=c( 0.3, 0.5,  0.45, 0.3)),
             aes(NMDS1,NMDS2, label=local), size=4)

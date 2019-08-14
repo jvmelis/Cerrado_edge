@@ -23,7 +23,7 @@ Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq) research 
 Fazenda São José da Conquista and the Instituto Arruda Botelho (IAB).
 
 
-This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_edge_2019.r`,  and `cerrado_dados.xlsx.r`.
+This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_edge_2019.r`,  and `cerrado_dados.xlsx`.
 
 ### clean_data.r
 

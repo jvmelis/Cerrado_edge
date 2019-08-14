@@ -1,5 +1,6 @@
 # Manuscript "Contrasting edge influence on lianas and trees in a cerrado savanna remnant"
-Authors: 
+**Authors:** 
+
 Juliano van Melis
 
 Maria Gabriela Gutierrez Camargo
@@ -10,9 +11,17 @@ Leonor Patricia Cerdeira Morellato
 
 Maria Tereza Grombone-Guaratini
 
-Submited to: **Austral Ecology**
+**Submited to:** Austral Ecology
 
-Submission date:
+**Submission date:**
+
+**Funding:**
+São Paulo Research Foundation (FAPESP) grants #2007/59779-6, #2010/01762-3, #2015/10754-8 and #2018/21646-0; 
+Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq) research productivity fellowship to LCPM. 
+
+**Acknowledgments:**
+Fazenda São José da Conquista and the Instituto Arruda Botelho (IAB).
+
 
 This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_edge_2019.r`,  and `cerrado_dados.xlsx.r`.
 
@@ -26,41 +35,41 @@ The result of `clean_data.r`. It has the following columns:
 
 `Plot`: plot id (25 m2).	
 
-`trees_BA`: sum of tree stand basal area per plot.	
+`trees_BA`: sum of tree stand basal area per plot (in cm2).	
 
-`trees_ab`: stem abundance of trees per plot.	
+`trees_ab`: stem abundance of trees per plot (number of stems).	
 
-`lianas_BA`: sum of liana stand basal area per plot.	
+`lianas_BA`: sum of liana stand basal area per plot (in cm2).	
 
-`lianas_ab`: stem abundance of lianas per plot.		
+`lianas_ab`: stem abundance of lianas per plot (number of stems).		
 
-`geo`: If the plot is located in the `south` or `east`.	
+`geo`: If the plot is located in the `south` or `east`. Two factors variable.	
 
-`dist`: If the plot is located in the `edge` or `interior`.		
+`dist`: If the plot is located in the `edge` or `interior`.	Two factors variable.	
 
-`Tree_cov`: Tree cover, calculated by hemispheric photos.	
+`Tree_cov`: Tree cover, calculated by hemispheric photos  (to the 25 m2 plot in %).	
 
-`Regen`: % of soil covered by regerative stratum.	
+`Regen`: % of soil covered by regerative stratum  (to the 25 m2 plot in %).	
 
-`Palm_cov`% of soil covered by Palms stratum.		
+`Palm_cov`% of soil covered by Palms stratum (to the 25 m2 plot in %).		
 
-`Bare_soil`: % of soil covered by bare soil stratum.	
+`Bare_soil`: % of soil covered by bare soil stratum  (to the 25 m2 plot in %).	
 
-`native`: % of soil covered by native grass stratum.	
+`native`: % of soil covered by native grass stratum  (to the 25 m2 plot in %).	
 
-`exotic`: % of soil covered by exotic grass stratum.	
+`exotic`: % of soil covered by exotic grass stratum  (to the 25 m2 plot in %).	
 
-`brom`:% of soil covered by bromeliad stratum.		
+`brom`:% of soil covered by bromeliad stratum (to the 25 m2 plot in %).		
 
-`PAR`: Photosynthetically active radiation.
+`PAR`: Photosynthetically active radiation (in $\mu$ mol.m2.s-1 ).
 
-`SOM`: Soil Organic Matter.	
+`SOM`: Soil Organic Matter (in mg.dm-3).	
 
-`Al`: Alumnium concentration in the soil.	
+`Al`: Alumnium concentration in the soil (in mg.dm-3).	
 
-`Mn`: Manganese concentration in the soil.
+`Mn`: Manganese concentration in the soil (in mg.dm-3).
 
-`local`: Concatenate `geo` and `dist` variables.
+`local`: Concatenate `geo` and `dist` variables: four factors variable.
 
 ### Cerrado_edge_2019.r
 All the analyses performed and graphs constructed in a R script.
@@ -83,23 +92,23 @@ Data from sampled plots:
 
 `Palm_cov`% of soil covered by Palms stratum	(in %, based on mean of observed % for each plot).
 
-`Bare_soil`: % of soil covered by bare soil stratum		(in %, based on mean of observed % for each plot).
+`Bare_soil`: % of soil covered by bare soil stratum	(in %, based on mean of observed % for each plot).
 
-`native`: % of soil covered by native grass stratum		(in %, based on mean of observed % for each plot).
+`native`: % of soil covered by native grass stratum	(in %, based on mean of observed % for each plot).
 
-`exotic`: % of soil covered by exotic grass stratum		(in %, based on mean of observed % for each plot).
+`exotic`: % of soil covered by exotic grass stratum	(in %, based on mean of observed % for each plot).
 
-`brom`:% of soil covered by bromeliad stratum		(in %, based on mean of observed % for each plot).
+`brom`:% of soil covered by bromeliad stratum	(in %, based on mean of observed % for each plot).
 
 `canopy`: Tree cover, obtained by hemispheric photos (in %).
 
-`PAR`: Photosynthetically active radiation (in ).
+`PAR`: Photosynthetically active radiation (in $\mu$ mol.m2.s-1 ).
 
-`SOM`: Soil Organic Matter	(in mg).
+`SOM`: Soil Organic Matter (in mg.dm-3).
 
-`Al`: Alumnium concentration in the soil (in mg).	
+`Al`: Alumnium concentration in the soil (in mg.dm-3).	
 
-`Mn`: Manganese concentration in the soil (in mg).
+`Mn`: Manganese concentration in the soil (in mg.dm-3).
 
 ### sheet: lianas
 `Date`: Sample date (DD/MM/YYYY). 
@@ -139,7 +148,7 @@ Data from sampled plots:
 
 `DBH_b`: Third stem DBH from the same visually individual	(in cm).	
 
-`DBH_c`: Fourth stem DBH from the same visually individual	(in cm).	
+`DBH_c`: Fourth stem DBH from the same visually individual (in cm).	
 
 `Family`: Liana botanical family.	
 
@@ -172,7 +181,8 @@ Data from sampled plots:
 
 `dist`: If the plot is located in the `edge` or `interior`.
 
-### host_tree
+### sheet: host_tree
+
 `id_1`: First Host tree ID	(same as `ind` in `trees` sheet).	
 
 `n_1`: Number of lianas on host tree #1	
@@ -186,7 +196,8 @@ Data from sampled plots:
 `n_3`: Number of lianas on host tree #3
 
 
-### Field_guide
+### sheet: Field_guide
+
 `Previously`: Field identification
 
 `Now`: Data homogeneization.

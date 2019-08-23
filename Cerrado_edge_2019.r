@@ -48,10 +48,7 @@ exp(as.data.frame(ls_trees)$SE)
 lsmeans::lsmeans(mod3, specs='geo')
 
 # C. Lianas BA
-lianas<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
-  mutate(liana_BA = pi*((Total_DBS/2)^2),
-         geo = ifelse(border=='BL'|border=="IL", 'East', 'South'),
-         dist = ifelse(border=='BL'|border=="BS", 'Edge', 'Interior'))
+source('Cerrado_syno.r')
 mod4 <- lmer(log(liana_BA)~geo*dist+(1|Plot), lianas)
 plot(mod4)
 summary(mod4) # ns
@@ -72,8 +69,9 @@ hosts<-left_join(h1,h2, by="ind") %>%
   dplyr::summarise(n_lianas=sum(sum(n.x,n.y, 
                                     na.rm = T), n, 
                                 na.rm = T))
-trees<-read_xlsx('cerrado_dados.xlsx', sheet = 'trees')
+
 trees<-left_join(trees,hosts, by='ind')
+rm(h1,h2,h3,hosts)
 
 mod5 <- trees %>% mutate(tree_BA = pi*((Diameter/2)^2)) %>%
   with(lmer(log(tree_BA)~geo*dist+(1|Plot)))
@@ -88,9 +86,32 @@ exp(as.data.frame(tree_intra)$SE)
 
 # Synthesis: 
 # a) Differences in lianas abundace (south more)
+group_by(lianas, border,Plot) %>%
+  summarise(n=n()) %>% 
+  mutate(n=ifelse(is.na(n),0,n))%>%
+  ungroup() %>% group_by(border) %>%
+  summarise(mean=mean_cl_boot(n)[[2]],
+            min=mean_cl_boot(n)[[1]],
+            max=mean_cl_boot(n)[[3]])
 # b) Differences in trees abundace (south more)
+trees %>% mutate(border = paste(geo,dist)) %>%
+  group_by(border,Plot) %>%
+  summarise(n=n()) %>% 
+  ungroup() %>% group_by(border) %>%
+  summarise(n=sum(n))
+
 # c) NO differences in lianas BA
 # d) Differences in trees BA (edge specially in the south has higher BA).
+trees %>% mutate(tree_BA = pi*((Diameter/2)^2),
+                 border = paste(geo,dist)) %>%
+  group_by(border,Plot) %>%
+  summarise(sum_BA=sum(tree_BA, na.rm=T)) %>% 
+  mutate(sum_BA=ifelse(is.na(sum_BA),0,sum_BA))%>%
+  ungroup() %>% group_by(border) %>%
+  summarise(n=n(),
+            mean=mean(sum_BA/25),
+            SE = sd(sum_BA/25)/n) %>%
+  mutate(ratio=1-mean/max(mean))
 
 #######################################################################
 ## 2. Environmental differences between edges and interiors
@@ -365,11 +386,7 @@ fig3
 ########################################################################
 ##### Rarefaction curves
 ######################
-lianas<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
-  mutate(liana_BA = pi*((Total_DBS/2)^2),
-         geo = ifelse(border=='BL'|border=="IL", 'East', 'South'),
-         dist = ifelse(border=='BL'|border=="BS", 'Edge', 'Interior'))
-trees<-read_xlsx('cerrado_dados.xlsx', sheet = 'trees')
+
 
 ##### Rarefaction curves
 ## LIANAS  
@@ -653,9 +670,4 @@ mean(pair.trees$beta.sor)
 mean(pair.trees$beta.sim)
 mean(pair.trees$beta.sne)
 
-t(trees_table) %>% as.data.frame() %>% spread(border,Freq) %>%
-  filter(east_edge!=0&south_edge!=0&east_interior!=0&south_interior!=0) # All = 43 spp
- # filter(east_edge!=0&south_edge==0&east_interior==0&south_interior==0) # exclusive to East Edge = 7 spp
- # filter(east_edge==0&south_edge!=0&east_interior==0&south_interior==0) # exclusive to South Edge = 12 spp
- # filter(east_edge==0&south_edge==0&east_interior!=0&south_interior==0) # exclusive to East Interior = 8 spp
- # filter(east_edge==0&south_edge==0&east_interior==0&south_interior!=0) # exclusive to South East = 12 spp
+source('VennDiagramCerrado.r')

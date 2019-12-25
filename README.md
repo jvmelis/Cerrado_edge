@@ -25,9 +25,21 @@ Fazenda São José da Conquista and the Instituto Arruda Botelho (IAB).
 
 This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_edge_2019.r`,  and `cerrado_dados.xlsx`.
 
+### Cerrado_edge_2019.r
+
+All the analyses performed and graphs constructed in a R script.
+
 ### clean_data.r
 
-Based on `cerrado_dados.xlsx`, we edited (clean) the data in this script.
+Based on `cerrado_dados.xlsx`, we edited (clean) the data in this R script.
+
+### Cerrado_syno.r
+
+R script performed to detect synonymies and to modify species names, according to Flora do Brasil 2020 (http://floradobrasil.jbrj.gov.br/)
+
+### VennDiagramCerrado.r
+
+R script to construct a Venn Diagram (Figure 3)
 
 ### clean_data.csv
 
@@ -70,9 +82,6 @@ The result of `clean_data.r`. It has the following columns:
 `Mn`: Manganese concentration in the soil (in mg.dm-3).
 
 `local`: Concatenate `geo` and `dist` variables: four factors variable.
-
-### Cerrado_edge_2019.r
-All the analyses performed and graphs constructed in a R script.
 
 ## cerrado_dados.xlsx
 This spreadsheet has five sheets:

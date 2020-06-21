@@ -1,4 +1,4 @@
-# Manuscript "Contrasting edge influence on lianas and trees in a cerrado savanna remnant"
+# Manuscript "Contrasting edge effect on lianas and trees in a cerrado savanna remnant"
 **Authors:** 
 
 Juliano van Melis
@@ -17,15 +17,14 @@ Maria Tereza Grombone-Guaratini
 
 **Funding:**
 São Paulo Research Foundation (FAPESP) grants #2007/59779-6, #2010/01762-3, #2015/10754-8 and #2018/21646-0; 
-Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq) research productivity fellowship to LCPM. 
+Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq) research productivity fellowship to LCPM (#311820/2018-2). 
 
 **Acknowledgments:**
 Fazenda São José da Conquista and the Instituto Arruda Botelho (IAB).
-
-
+We thank Betânia Cunha Vargas, Gustavo Camargo, Julia Caram Sfair and two anonymous reviewers for the valuable comments on the previous drafts.
 This repository has the following files: `clean_data.r`,`clean_data.csv`,`Cerrado_edge_2019.r`,  and `cerrado_dados.xlsx`.
 
-### Cerrado_edge_2019.r
+### liana_edge_effects_cerrado_2020.r
 
 All the analyses performed and graphs constructed in a R script.
 
@@ -40,48 +39,6 @@ R script performed to detect synonymies and to modify species names, according t
 ### VennDiagramCerrado.r
 
 R script to construct a Venn Diagram (Figure 3)
-
-### clean_data.csv
-
-The result of `clean_data.r`. It has the following columns:
-
-`Plot`: plot id (25 m2).	
-
-`trees_BA`: sum of tree stand basal area per plot (in cm2).	
-
-`trees_ab`: stem abundance of trees per plot (number of stems).	
-
-`lianas_BA`: sum of liana stand basal area per plot (in cm2).	
-
-`lianas_ab`: stem abundance of lianas per plot (number of stems).		
-
-`geo`: If the plot is located in the `south` or `east`. Two factors variable.	
-
-`dist`: If the plot is located in the `edge` or `interior`.	Two factors variable.	
-
-`Tree_cov`: Tree cover, calculated by hemispheric photos  (to the 25 m2 plot in %).	
-
-`Regen`: % of soil covered by regerative stratum  (to the 25 m2 plot in %).	
-
-`Palm_cov`% of soil covered by Palms stratum (to the 25 m2 plot in %).		
-
-`Bare_soil`: % of soil covered by bare soil stratum  (to the 25 m2 plot in %).	
-
-`native`: % of soil covered by native grass stratum  (to the 25 m2 plot in %).	
-
-`exotic`: % of soil covered by exotic grass stratum  (to the 25 m2 plot in %).	
-
-`brom`:% of soil covered by bromeliad stratum (to the 25 m2 plot in %).		
-
-`PAR`: Photosynthetically active radiation (in $\mu$ mol.m2.s-1 ).
-
-`SOM`: Soil Organic Matter (in mg.dm-3).	
-
-`Al`: Alumnium concentration in the soil (in mg.dm-3).	
-
-`Mn`: Manganese concentration in the soil (in mg.dm-3).
-
-`local`: Concatenate `geo` and `dist` variables: four factors variable.
 
 ## cerrado_dados.xlsx
 This spreadsheet has five sheets:
@@ -203,7 +160,6 @@ Data from sampled plots:
 `id_3`: Third Host tree ID	(same as `ind` in `trees` sheet).	
 
 `n_3`: Number of lianas on host tree #3
-
 
 ### sheet: Field_guide
 

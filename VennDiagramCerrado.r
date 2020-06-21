@@ -2,7 +2,6 @@ if(!require(readxl)){install.packages("readxl")}       # read_excel
 if(!require(tidyverse)){install.packages('tidyverse')} # data manipulation & graphs
 if(!require(cowplot)){install.packages('cowplot')}     # plot_grid
 if(!require(VennDiagram)){install.packages('VennDiagram')}
-setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
 
 # source: "https://raw.githubusercontent.com/cran/VennDiagram/master/R/draw.quad.venn.R"
 draw.quad.venn <- function(
@@ -218,7 +217,6 @@ draw.quad.venn <- function(
     );
   }
   
-  
   # find the location and plot all the category names
   cat.pos.x <- c(0.18, 0.82, 0.35, 0.65);
   cat.pos.y <- c(0.58, 0.58, 0.77, 0.77);
@@ -262,7 +260,7 @@ draw.quad.venn <- function(
 
 
 # Lianas
-lianas_venn<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
+lianas_venn<-readxl::read_excel('cerrado_dados.xlsx', sheet = 'lianas') %>%
   mutate(geo = ifelse(border=='BL'|border=="IL", 'East', 'South'),
          dist = ifelse(border=='BL'|border=="BS", 'Edge', 'Interior')) %>%
   dplyr::select(Species, border) %>%
@@ -272,8 +270,7 @@ lianas_venn<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
   with(table(Species, border)) %>%
   as.data.frame()%>% spread(border,Freq)
 
-
-dados<-data.frame(summarise(filter(lianas_venn,BL!=0),area1=n()),
+dados_venn<-data.frame(summarise(filter(lianas_venn,BL!=0),area1=n()),
                   summarise(filter(lianas_venn,BS!=0),area2=n()),
                   summarise(filter(lianas_venn,IL!=0),area3=n()),
                   summarise(filter(lianas_venn,IS!=0),area4=n()),
@@ -290,12 +287,12 @@ dados<-data.frame(summarise(filter(lianas_venn,BL!=0),area1=n()),
                   summarise(filter(lianas_venn,BL!=0&BS!=0&IL!=0&IS!=0), n1234=n())) 
 
 lianas_venn_plot <- draw.quad.venn(
-  area1 = dados$area1, area2 = dados$area2, 
-  area3 = dados$area3, area4 = dados$area4,
-  n12 = dados$n12, n13 = dados$n13, n14 = dados$n14,
-  n23 = dados$n23, n24 = dados$n24, n34 = dados$n34,
-  n123 = dados$n123, n124 = dados$n124, n134 = dados$n134,
-  n234 = dados$n234, n1234 = dados$n1234,
+  area1 = dados_venn$area1, area2 = dados_venn$area2, 
+  area3 = dados_venn$area3, area4 = dados_venn$area4,
+  n12 = dados_venn$n12, n13 = dados_venn$n13, n14 = dados_venn$n14,
+  n23 = dados_venn$n23, n24 = dados_venn$n24, n34 = dados_venn$n34,
+  n123 = dados_venn$n123, n124 = dados_venn$n124, n134 = dados_venn$n134,
+  n234 = dados_venn$n234, n1234 = dados_venn$n1234,
   category = c("East edge", "South edge", 
                "East interior", "South interior"),
   fill = c("white", "white", "grey", "grey")
@@ -311,7 +308,7 @@ trees_venn<-trees %>%
   with(table(Species, border)) %>%as.data.frame() %>% 
   spread(border,Freq)
 
-dados<-cbind(summarise(filter(trees_venn,east_edge!=0),area1=n()),
+dados_venn<-cbind(summarise(filter(trees_venn,east_edge!=0),area1=n()),
              summarise(filter(trees_venn,south_edge!=0),area2=n()),
              summarise(filter(trees_venn,east_interior!=0),area3=n()),
              summarise(filter(trees_venn,south_interior!=0),area4=n()),
@@ -329,17 +326,19 @@ dados<-cbind(summarise(filter(trees_venn,east_edge!=0),area1=n()),
              summarise(filter(trees_venn,east_edge!=0),area1=n()))
 
 trees_venn_plot <- draw.quad.venn(
-  area1 = dados$area1, area2 = dados$area2, 
-  area3 = dados$area3, area4 = dados$area4,
-  n12 = dados$n12, n13 = dados$n13, n14 = dados$n14,
-  n23 = dados$n23, n24 = dados$n24, n34 = dados$n34,
-  n123 = dados$n123, n124 = dados$n124, n134 = dados$n134,
-  n234 = dados$n234, n1234 = dados$n1234,
+  area1 = dados_venn$area1, area2 = dados_venn$area2, 
+  area3 = dados_venn$area3, area4 = dados_venn$area4,
+  n12 = dados_venn$n12, n13 = dados_venn$n13, n14 = dados_venn$n14,
+  n23 = dados_venn$n23, n24 = dados_venn$n24, n34 = dados_venn$n34,
+  n123 = dados_venn$n123, n124 = dados_venn$n124, n134 = dados_venn$n134,
+  n234 = dados_venn$n234, n1234 = dados_venn$n1234,
   category = c("East edge", "South edge", 
                "East interior", "South interior"),
   fill = c("white", "white", "grey", "grey")
   )
-cowplot::plot_grid(trees_venn_plot, lianas_venn_plot, 
+dev.off()
+
+Fig3<-cowplot::plot_grid(lianas_venn_plot,trees_venn_plot, 
                    nrow = 2,
-                   labels = c("a) Trees","b) Lianas"))
-# ggsave('VennDiagram.jpg')
+                   labels = c("a) Lianas","b) Trees"))
+rm(list=c(dados,lianas_venn, lianas_venn_plot, trees_venn, trees_venn_plot, dados_venn))

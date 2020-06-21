@@ -1,9 +1,6 @@
-if(!require(readxl)){install.packages("readxl")}       # read_excel
-if(!require(tidyverse)){install.packages('tidyverse')} # data manipulation & graphs
 if(!require(flora)){install.packages("flora")}
 
-setwd("C:/Users/User/Documents/ARTIGOS - Meus/2 MS - Cerrado edge effect on lianas/2019 Austral Ecology")
-trees_table<-read_xlsx('cerrado_dados.xlsx', sheet = 'trees') %>% 
+trees_table<-readxl::read_excel('cerrado_dados.xlsx', sheet = 'trees') %>% 
   mutate(border = paste0(geo,"_",dist)) %>%
   dplyr::select(Species, border)  %>%
   with(table(Species, border)) %>% as.data.frame() %>%
@@ -28,19 +25,19 @@ resulta<-inner_join(trees_table,synom, by="Species") %>%
                                   scientific.name,
                                   Species))
 
-resulta$family[resulta$family=='Lippia balansae']<-'Asteraceae' # odd
 resulta[order(resulta$family,resulta$scientific.name),] %>%
   dplyr::select(family,scientific.name,ee,ei,se,si, total) %>% 
   write.csv("trees_species.csv")
-trees<-read_xlsx('cerrado_dados.xlsx', sheet = 'trees') %>% 
+trees<-readxl::read_excel('cerrado_dados.xlsx', sheet = 'trees') %>% 
   mutate(border = paste0(geo,"_",dist)) 
-trees<-resulta %>% dplyr::select(Species, scientific.name) %>%
-  right_join(trees,by="Species") %>% dplyr::select(-Species) %>%
-  mutate(Species=scientific.name)%>% dplyr::select(-scientific.name) 
+trees <- resulta %>% dplyr::select(Species, scientific.name) %>%
+  right_join(trees) %>% dplyr::select(-Species) %>%
+  mutate(Species=scientific.name,
+         tree_BA=pi*((Diameter/2)^2))%>% dplyr::select(-scientific.name) 
 rm(resulta,synom,trees_table)
 
 
-lianas_table <- read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
+lianas_table <- readxl::read_excel('cerrado_dados.xlsx', sheet = 'lianas') %>%
   mutate(liana_BA = pi*((Total_DBS/2)^2),
          geo = ifelse(border=='BL'|border=="IL", 'east', 'south'),
          dist = ifelse(border=='BL'|border=="BS", 'edge', 'interior'),
@@ -69,14 +66,12 @@ resulta<-inner_join(lianas_table,synom, by="Species") %>%
 resulta[order(resulta$family,resulta$scientific.name),] %>%
   dplyr::select(family,scientific.name,ee,ei,se,si, total) %>% 
   write.csv("liana_species.csv")
-
-lianas<-read_xlsx('cerrado_dados.xlsx', sheet = 'lianas') %>%
+resulta<-resulta%>% dplyr::select(Species, scientific.name)
+lianas<-readxl::read_excel('cerrado_dados.xlsx', sheet = 'lianas') %>%# filter(border=="BL"&Transect==4)
   mutate(liana_BA = pi*((Total_DBS/2)^2),
          geo = ifelse(border=='BL'|border=="IL", 'East', 'South'),
          dist = ifelse(border=='BL'|border=="BS", 'Edge', 'Interior'))
-
-lianas<-resulta %>% dplyr::select(Species, scientific.name) %>%
-  right_join(lianas, by="Species") %>% dplyr::select(-Species) %>%
+lianas <- right_join(resulta, lianas) %>% dplyr::select(-Species) %>%
   mutate(Species=scientific.name)%>% dplyr::select(-scientific.name) 
 
 rm(resulta,synom,lianas_table)
